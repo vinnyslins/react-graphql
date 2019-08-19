@@ -24,6 +24,18 @@ const CreateTodoMutation = gql`
   }
 `;
 
+const DeleteTodoMutation = gql`
+  mutation DeleteTodo($id: ID!) {
+    deleteTodo(
+      where: {
+        id: $id
+      }
+    ) {
+      id
+    }
+  }
+`;
+
 const TodoList = props => {
   const { todos } = props;
   const [newTodo, setNewTodo] = useState('');
@@ -32,7 +44,10 @@ const TodoList = props => {
     <ul>
       {
         todos.todoes.map(todo => (
-          <li key={todo.id}>{todo.text}</li>
+          <li key={todo.id}>
+            {todo.text}
+            <button onClick={() => deleteTodo(todo.id)}>Excluir</button>
+          </li>
         ))
       }
     </ul>
@@ -48,6 +63,15 @@ const TodoList = props => {
         }
       });
     }
+  };
+
+  const deleteTodo = id => {
+    props.deleteTodo({
+      variables: { id },
+      update: () => {
+        props.todos.refetch();
+      }
+    });
   };
 
   return (
@@ -70,5 +94,6 @@ const TodoList = props => {
 
 export default compose(
   graphql(TodosQuery, { name: 'todos' }),
-  graphql(CreateTodoMutation, { name: 'createTodo' })
+  graphql(CreateTodoMutation, { name: 'createTodo' }),
+  graphql(DeleteTodoMutation, { name: 'deleteTodo' })
 )(TodoList);
