@@ -1,6 +1,6 @@
-import React, { Fragment } from 'react';
-
+import React, { Fragment, useState } from 'react';
 import { graphql } from 'react-apollo';
+import * as compose from 'lodash.flowright';
 import gql from 'graphql-tag';
 
 const TodosQuery = gql`
@@ -12,8 +12,21 @@ const TodosQuery = gql`
   }
 `;
 
+const CreateTodoMutation = gql`
+  mutation CreateTodo($text: String!) {
+    createTodo(
+      data: {
+        text: $text
+      }
+    ) {
+      id
+    }
+  }
+`;
+
 const TodoList = props => {
   const { todos } = props;
+  const [newTodo, setNewTodo] = useState('');
 
   const renderTodoList = () => (
     <ul>
@@ -25,6 +38,18 @@ const TodoList = props => {
     </ul>
   );
 
+  const addTodo = () => {
+    if (newTodo) {
+      props.createTodo({
+        variables: { text: newTodo },
+        update: () => {
+          props.todos.refetch();
+          setNewTodo('');
+        }
+      });
+    }
+  };
+
   return (
     <Fragment>
       {
@@ -32,8 +57,18 @@ const TodoList = props => {
           ? <p>Carregando...</p>
           : renderTodoList()
       }
+
+      <input
+        type='text'
+        value={newTodo}
+        onChange={e => setNewTodo(e.target.value)}
+      />
+      <button onClick={addTodo}>Adicionar</button>
     </Fragment>
   );
 };
 
-export default graphql(TodosQuery, { name: 'todos' })(TodoList);
+export default compose(
+  graphql(TodosQuery, { name: 'todos' }),
+  graphql(CreateTodoMutation, { name: 'createTodo' })
+)(TodoList);
