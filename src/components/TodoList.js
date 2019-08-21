@@ -1,5 +1,5 @@
 import React, { Fragment, useState } from 'react';
-import { useMutation, useQuery } from 'react-apollo';
+import { useMutation, useQuery, useSubscription } from 'react-apollo';
 import gql from 'graphql-tag';
 
 const GET_TODOS = gql`
@@ -35,6 +35,14 @@ const DELETE_TODO = gql`
   }
 `;
 
+const TODOS_SUBSCRIPTION = gql`
+subscription {
+  todo {
+      mutation
+    }
+  }
+`;
+
 const Error = () => (
   <p>Ocorreu um erro!</p>
 );
@@ -48,6 +56,10 @@ const TodoList = () => {
   const [createTodo] = useMutation(CREATE_TODO);
   const [deleteTodo] = useMutation(DELETE_TODO);
 
+  useSubscription(TODOS_SUBSCRIPTION, {
+    onSubscriptionData: () => refetch()
+  });
+
   const [newTodo, setNewTodo] = useState('');
 
   const renderTodoList = () => (
@@ -56,7 +68,9 @@ const TodoList = () => {
         data.todoes.map(todo => (
           <li key={todo.id}>
             {todo.text}
-            <button onClick={() => removeTodo(todo.id)}>Excluir</button>
+            <button onClick={
+              () => deleteTodo({ variables: { id: todo.id } })
+            }>Excluir</button>
           </li>
         ))
       }
@@ -68,20 +82,10 @@ const TodoList = () => {
       createTodo({
         variables: { text: newTodo },
         update: () => {
-          refetch();
           setNewTodo('');
         }
       });
     }
-  };
-
-  const removeTodo = id => {
-    deleteTodo({
-      variables: { id },
-      update: () => {
-        refetch();
-      }
-    });
   };
 
   if (error) return <Error/>
