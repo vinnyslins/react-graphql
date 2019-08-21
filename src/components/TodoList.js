@@ -1,9 +1,8 @@
 import React, { Fragment, useState } from 'react';
-import { graphql } from 'react-apollo';
-import * as compose from 'lodash.flowright';
+import { useMutation, useQuery } from 'react-apollo';
 import gql from 'graphql-tag';
 
-const TodosQuery = gql`
+const GET_TODOS = gql`
   query {
     todoes {
       id
@@ -12,7 +11,7 @@ const TodosQuery = gql`
   }
 `;
 
-const CreateTodoMutation = gql`
+const CREATE_TODO = gql`
   mutation CreateTodo($text: String!) {
     createTodo(
       data: {
@@ -24,7 +23,7 @@ const CreateTodoMutation = gql`
   }
 `;
 
-const DeleteTodoMutation = gql`
+const DELETE_TODO = gql`
   mutation DeleteTodo($id: ID!) {
     deleteTodo(
       where: {
@@ -36,17 +35,28 @@ const DeleteTodoMutation = gql`
   }
 `;
 
-const TodoList = props => {
-  const { todos } = props;
+const Error = () => (
+  <p>Ocorreu um erro!</p>
+);
+
+const Loading = () => (
+  <p>Carregando...</p>
+)
+
+const TodoList = () => {
+  const { loading, error, data, refetch } = useQuery(GET_TODOS);
+  const [createTodo] = useMutation(CREATE_TODO);
+  const [deleteTodo] = useMutation(DELETE_TODO);
+
   const [newTodo, setNewTodo] = useState('');
 
   const renderTodoList = () => (
     <ul>
       {
-        todos.todoes.map(todo => (
+        data.todoes.map(todo => (
           <li key={todo.id}>
             {todo.text}
-            <button onClick={() => deleteTodo(todo.id)}>Excluir</button>
+            <button onClick={() => removeTodo(todo.id)}>Excluir</button>
           </li>
         ))
       }
@@ -55,32 +65,31 @@ const TodoList = props => {
 
   const addTodo = () => {
     if (newTodo) {
-      props.createTodo({
+      createTodo({
         variables: { text: newTodo },
         update: () => {
-          props.todos.refetch();
+          refetch();
           setNewTodo('');
         }
       });
     }
   };
 
-  const deleteTodo = id => {
-    props.deleteTodo({
+  const removeTodo = id => {
+    deleteTodo({
       variables: { id },
       update: () => {
-        props.todos.refetch();
+        refetch();
       }
     });
   };
 
+  if (error) return <Error/>
+  if (loading) return <Loading/>
+
   return (
     <Fragment>
-      {
-        todos.loading
-          ? <p>Carregando...</p>
-          : renderTodoList()
-      }
+      {renderTodoList()}
 
       <input
         type='text'
@@ -92,8 +101,4 @@ const TodoList = props => {
   );
 };
 
-export default compose(
-  graphql(TodosQuery, { name: 'todos' }),
-  graphql(CreateTodoMutation, { name: 'createTodo' }),
-  graphql(DeleteTodoMutation, { name: 'deleteTodo' })
-)(TodoList);
+export default TodoList;
